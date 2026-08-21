@@ -1,12 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
-function SidePanel() {
-  return <main aria-label="翻译侧边栏" />
-}
+import { App } from './App'
+import './styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <SidePanel />
+    <App />
   </React.StrictMode>,
 )

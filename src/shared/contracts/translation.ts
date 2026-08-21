@@ -69,6 +69,7 @@ export function validateTranslationResult(input: unknown): TranslationResult {
 export type TranslationState =
   | { kind: 'idle' }
   | { kind: 'extracting' }
+  | { kind: 'preview' }
   | { kind: 'translating' }
   | { kind: 'completed'; result: TranslationResult }
   | { kind: 'failed'; errorCode: AppErrorCode }

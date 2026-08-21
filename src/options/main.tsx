@@ -1,12 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
-function OptionsPage() {
-  return <main aria-label="扩展设置" />
-}
+import { App } from './App'
+import './styles/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <OptionsPage />
+    <App />
   </React.StrictMode>,
 )

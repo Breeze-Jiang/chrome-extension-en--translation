@@ -119,6 +119,8 @@ describe('扩展消息校验', () => {
       type: 'EXTRACT_ARTICLE_REQUEST',
       protocolVersion: 1,
       requestId: 'req-1',
+      tabId: 12,
+      url: 'https://example.com/article',
     }
     expect(validateExtensionMessage(message)).toEqual(message)
   })
@@ -176,6 +178,71 @@ describe('扩展消息校验', () => {
   })
 })
 
+describe('当前标签页与页面探针消息校验', () => {
+  const activeTabInfo = {
+    tabId: 7,
+    title: 'Example',
+    url: 'https://example.com',
+    domain: 'example.com',
+    processable: true,
+    reason: null,
+  }
+
+  it('接受合法的活动标签页响应', () => {
+    const message = {
+      type: 'GET_ACTIVE_TAB_RESPONSE',
+      protocolVersion: 1,
+      requestId: 'req-1',
+      tab: activeTabInfo,
+    }
+    expect(validateExtensionMessage(message)).toEqual(message)
+  })
+
+  it('接受合法的页面探针请求与响应', () => {
+    expect(
+      validateExtensionMessage({
+        type: 'PAGE_PROBE_REQUEST',
+        protocolVersion: 1,
+        requestId: 'req-1',
+      }),
+    ).toEqual({ type: 'PAGE_PROBE_REQUEST', protocolVersion: 1, requestId: 'req-1' })
+
+    expect(
+      validateExtensionMessage({
+        type: 'PAGE_PROBE_RESPONSE',
+        protocolVersion: 1,
+        requestId: 'req-1',
+        probe: { title: 'T', url: 'https://example.com', visibleTextLength: 12 },
+      }),
+    ).toEqual({
+      type: 'PAGE_PROBE_RESPONSE',
+      protocolVersion: 1,
+      requestId: 'req-1',
+      probe: { title: 'T', url: 'https://example.com', visibleTextLength: 12 },
+    })
+  })
+
+  it('活动标签页 reason 非法时拒绝', () => {
+    const message = {
+      type: 'GET_ACTIVE_TAB_RESPONSE',
+      protocolVersion: 1,
+      requestId: 'req-1',
+      tab: { ...activeTabInfo, reason: 'NOT_A_CODE' },
+    }
+    expect(() => validateExtensionMessage(message)).toThrow()
+  })
+
+  it('页面探针可见文本长度非法时拒绝', () => {
+    const message = {
+      type: 'PAGE_PROBE_RESPONSE',
+      protocolVersion: 1,
+      requestId: 'req-1',
+      probe: { title: 'T', url: 'https://example.com', visibleTextLength: -1 },
+    }
+    expect(() => validateExtensionMessage(message)).toThrow()
+  })
+})
+
 describe('统一错误模型', () => {
   it('AppError 保留错误码、消息与原因', () => {
     const cause = new Error('upstream')
@@ -213,6 +280,8 @@ describe('状态与消息的 TypeScript 穷尽检查', () => {
           return 'idle'
         case 'extracting':
           return 'extracting'
+        case 'preview':
+          return 'preview'
         case 'translating':
           return 'translating'
         case 'completed':
@@ -240,6 +309,13 @@ describe('状态与消息的 TypeScript 穷尽检查', () => {
           return 'success'
         case 'EXTRACT_ARTICLE_FAILURE':
           return 'failure'
+        case 'GET_ACTIVE_TAB_REQUEST':
+        case 'GET_ACTIVE_TAB_RESPONSE':
+          return 'active-tab'
+        case 'PAGE_PROBE_REQUEST':
+        case 'PAGE_PROBE_RESPONSE':
+        case 'PAGE_PROBE_FAILURE':
+          return 'page-probe'
       }
       assertNever(message)
     }
@@ -249,6 +325,8 @@ describe('状态与消息的 TypeScript 穷尽检查', () => {
         type: 'EXTRACT_ARTICLE_REQUEST',
         protocolVersion: 1,
         requestId: 'req-1',
+        tabId: 12,
+        url: 'https://example.com/article',
       }),
     ).toBe('request')
   })
