@@ -1,4 +1,5 @@
 import type { TranslationState } from '../../shared/contracts/translation'
+import { getUserFacingError } from '../../shared/errors/user-message'
 
 interface ActionBarProps {
   state: TranslationState
@@ -58,17 +59,28 @@ export function ActionBar({
           </button>
         </div>
       )
-    case 'failed':
-      return (
-        <div className="action-bar">
-          <button type="button" className="button button--primary" onClick={onRetry}>
-            重试
-          </button>
-          <button type="button" className="button button--link" onClick={onOpenSettings}>
-            打开设置
-          </button>
-        </div>
-      )
+    case 'failed': {
+      const action = getUserFacingError(state.errorCode).action
+      if (action === 'retry') {
+        return (
+          <div className="action-bar">
+            <button type="button" className="button button--primary" onClick={onRetry}>
+              重试
+            </button>
+          </div>
+        )
+      }
+      if (action === 'open-settings') {
+        return (
+          <div className="action-bar">
+            <button type="button" className="button button--primary" onClick={onOpenSettings}>
+              打开设置
+            </button>
+          </div>
+        )
+      }
+      return null
+    }
     case 'cancelled':
       return (
         <div className="action-bar">

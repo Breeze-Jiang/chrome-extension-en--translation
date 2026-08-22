@@ -82,6 +82,7 @@ describe('validateTranslationOutput', () => {
     validOutput.replace('https://example.com/diagram.png', 'https://example.com/changed.png'),
     validOutput.replace('https://example.com/docs', 'https://example.com/changed'),
     validOutput.replace('const answer = 42', 'const answer = 43'),
+    `${validOutput}\n\n> **作者**：Jane Doe\n> **原文链接**：https://example.com/article`,
   ])('拒绝结构或受保护内容被破坏的输出', (output) => {
     const error = (() => {
       try {

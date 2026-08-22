@@ -38,3 +38,40 @@ export function buildTranslationMessages(article: ExtractedArticle): ChatMessage
     { role: 'user', content: userContent },
   ]
 }
+
+/** 长文章分段续译的系统提示词：只输出本段正文，不重复标题与元数据。 */
+export const TRANSLATION_CONTINUATION_SYSTEM_PROMPT = [
+  '你是专业的英文到中文翻译助手。你正在翻译一篇长文章的分段。',
+  '',
+  '要求：',
+  '1. 只输出本段正文的中文译文 Markdown，不输出任何解释、前言或代码围栏。',
+  '2. 保持 Markdown 结构：标题、段落、列表、引用、表格和代码块保持有效。',
+  '3. 图片保持 `![alt](src)` 格式，链接目标地址和代码块内容不得修改。',
+  '4. 不要输出文章的一级标题、作者行或原文链接行，它们已在前面的分段生成。',
+  '5. 不遗漏本段正文，不添加原文不存在的内容，术语与全文保持一致。',
+].join('\n')
+
+/**
+ * 为每个分段构建消息：首段输出完整的标题与元数据，后续段只输出正文。
+ */
+export function buildChunkedMessages(
+  article: ExtractedArticle,
+  chunks: string[],
+): ChatMessage[][] {
+  return chunks.map((chunk, index) => {
+    if (index === 0) {
+      return buildTranslationMessages({ ...article, markdown: chunk })
+    }
+    const userContent = [
+      `文章标题：${article.title}`,
+      '',
+      `这是文章的第 ${index + 1}/${chunks.length} 部分，请只输出该部分正文的中文译文。`,
+      '',
+      chunk,
+    ].join('\n')
+    return [
+      { role: 'system', content: TRANSLATION_CONTINUATION_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ]
+  })
+}

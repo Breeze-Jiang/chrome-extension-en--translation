@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Build a Small Status API</title></head>
+<body>
+  <nav>Docs navigation that should disappear</nav>
+  <article>
+    <h1>Build a Small Status API</h1>
+    <p>In this tutorial you will create a small status endpoint, verify its response, and understand each part of the implementation.</p>
+    <h2>Prerequisites</h2>
+    <ul><li>Node.js 20 or newer</li><li>A terminal</li></ul>
+    <h2>Implementation</h2>
+    <ol><li>Create a project directory.</li><li>Install the server dependency.</li><li>Add the endpoint shown below.</li></ol>
+    <pre><code class="language-js">const status = { ok: true }
+console.log(status)</code></pre>
+    <blockquote>Keep the endpoint free of secrets and user-specific information.</blockquote>
+    <h2>Configuration</h2>
+    <table><thead><tr><th>Option</th><th>Purpose</th></tr></thead><tbody><tr><td>PORT</td><td>Listening port</td></tr><tr><td>HOST</td><td>Listening address</td></tr></tbody></table>
+    <p>Run the application and request the endpoint to confirm that it returns a successful response before deployment.</p>
+    <p>You can now integrate the status endpoint with a monitoring service while keeping the implementation intentionally small.</p>
+  </article>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import imagesFixture from '../../test/fixtures/article-images.html?raw'
+import tutorialFixture from '../../test/fixtures/article-tutorial.html?raw'
 
 import { convertHtmlToMarkdown } from './converter'
 
@@ -65,7 +66,7 @@ describe('convertHtmlToMarkdown 清理', () => {
 })
 
 describe('convertHtmlToMarkdown 固件端到端', () => {
-  it('图片固件转换结果稳定且包含绝对地址与代码内容', () => {
+  it('图片固件覆盖绝对、相对、srcset、延迟加载与跟踪像素', () => {
     const doc = new DOMParser().parseFromString(imagesFixture, 'text/html')
     const article = doc.querySelector('article')!
 
@@ -75,7 +76,24 @@ describe('convertHtmlToMarkdown 固件端到端', () => {
     expect(md).toContain('https://example.com/images/relative.png')
     expect(md).toContain('https://example.com/images/high.png')
     expect(md).toContain('https://example.com/images/lazy.png')
+    expect(md).toContain('![Lazy srcset image](https://example.com/images/lazy-large.png)')
     expect(md).not.toContain('base64')
+    expect(md).not.toContain('Tracking pixel')
     expect(md).toContain('const x = 1;')
+  })
+
+  it('教程固件保留列表、引用、表格和代码结构', () => {
+    const doc = new DOMParser().parseFromString(tutorialFixture, 'text/html')
+    const article = doc.querySelector('article')!
+
+    const md = convertHtmlToMarkdown(article.innerHTML, BASE_URL)
+
+    expect(md).toMatch(/-\s+Node\.js 20 or newer/)
+    expect(md).toMatch(/1\.\s+Create a project directory\./)
+    expect(md).toContain('> Keep the endpoint free of secrets')
+    expect(md).toMatch(/\| Option\s+\| Purpose\s+\|/)
+    expect(md).toContain('| PORT')
+    expect(md).toContain('```')
+    expect(md).toContain('const status = { ok: true }')
   })
 })

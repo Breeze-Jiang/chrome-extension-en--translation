@@ -24,6 +24,7 @@ export async function readResult(): Promise<TranslationResult | null> {
 export async function saveResult(
   result: unknown,
   shouldCommit: () => boolean = () => true,
+  onCommit: () => void = () => undefined,
 ): Promise<void> {
   try {
     const validated = validateTranslationResult(result)
@@ -31,6 +32,7 @@ export async function saveResult(
     if (!shouldCommit()) {
       return
     }
+    onCommit()
     await chrome.storage.local.set({ [RESULT_STORAGE_KEY]: validated })
   } catch (error) {
     throw new AppError('STORAGE_FAILED', '保存最近翻译结果失败。', { cause: error })

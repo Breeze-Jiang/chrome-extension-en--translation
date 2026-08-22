@@ -71,12 +71,16 @@ export function extractArticle(
   const fallbackResult = runExtractor(fallback, document, url)
 
   if (!fallbackResult) {
-    return primaryResult
+    return primaryResult && evaluateQuality(primaryResult) >= QUALITY_THRESHOLD
+      ? primaryResult
+      : null
   }
-  if (!primaryResult || evaluateQuality(fallbackResult) > evaluateQuality(primaryResult)) {
-    return fallbackResult
-  }
-  return primaryResult
+  const selected =
+    !primaryResult || evaluateQuality(fallbackResult) > evaluateQuality(primaryResult)
+      ? fallbackResult
+      : primaryResult
+
+  return evaluateQuality(selected) >= QUALITY_THRESHOLD ? selected : null
 }
 
 /**

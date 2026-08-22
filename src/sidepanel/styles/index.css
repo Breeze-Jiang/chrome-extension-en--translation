@@ -84,14 +84,24 @@ body {
 }
 
 .status-panel {
+  font-weight: 600;
+}
+
+.status-panel__line {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 600;
 }
 
 .status-panel__icon {
   color: var(--color-primary);
+}
+
+.status-panel__detail {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .translation-view {

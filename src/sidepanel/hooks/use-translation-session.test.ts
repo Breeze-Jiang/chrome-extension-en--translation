@@ -1,10 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ExtractedArticle } from '../../shared/contracts/article'
 import type { ModelSettings } from '../../shared/contracts/settings'
 import type { TranslationResult } from '../../shared/contracts/translation'
 import { AppError } from '../../shared/errors/app-error'
+import { RESULT_STORAGE_KEY, saveResult } from '../../storage/result-repository'
 import type { TranslationProvider } from '../../translation/providers/translation-provider'
 import {
   useTranslationSession,
@@ -45,7 +46,9 @@ function makeDependencies(provider?: TranslationProvider): TranslationSessionDep
   return {
     readSettings: vi.fn().mockResolvedValue(settings),
     readResult: vi.fn().mockResolvedValue(null),
-    saveResult: vi.fn().mockResolvedValue(undefined),
+    saveResult: vi.fn().mockImplementation(async (_result, _shouldCommit, onCommit) => {
+      onCommit()
+    }),
     extractArticle: vi.fn().mockResolvedValue(article),
     openSettings: vi.fn().mockResolvedValue(undefined),
     provider: provider ?? {
@@ -60,6 +63,10 @@ function makeDependencies(provider?: TranslationProvider): TranslationSessionDep
 
 beforeEach(() => {
   vi.useRealTimers()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('useTranslationSession', () => {
@@ -176,6 +183,31 @@ describe('useTranslationSession', () => {
     expect(result.current.state).toEqual({ kind: 'cancelled' })
   })
 
+  it('真实 storage.set 开始后取消不改变成功写入', async () => {
+    let finishSet!: () => void
+    const storage = new Map<string, unknown>([[RESULT_STORAGE_KEY, storedResult]])
+    const storageSet = vi.fn((items: Record<string, unknown>) => new Promise<void>((resolve) => {
+      finishSet = () => {
+        Object.entries(items).forEach(([key, value]) => storage.set(key, value))
+        resolve()
+      }
+    }))
+    vi.stubGlobal('chrome', { storage: { local: { set: storageSet } } })
+    const dependencies = makeDependencies()
+    dependencies.saveResult = saveResult
+    const { result } = renderHook(() => useTranslationSession(dependencies))
+
+    act(() => { result.current.start(12, article.url) })
+    await waitFor(() => expect(storageSet).toHaveBeenCalledTimes(1))
+
+    act(() => { result.current.cancel() })
+    expect(result.current.state.kind).not.toBe('cancelled')
+
+    await act(async () => { finishSet() })
+    await waitFor(() => expect(result.current.state.kind).toBe('completed'))
+    expect(storage.get(RESULT_STORAGE_KEY)).toMatchObject({ title: '文章', markdown: translated })
+  })
+
   it('持久化期间卸载会使条件提交失效', async () => {
     let shouldCommit!: () => boolean
     const dependencies = makeDependencies()
@@ -215,5 +247,43 @@ describe('useTranslationSession', () => {
     await act(async () => { releaseSecond() })
     expect(result.current.state).toEqual({ kind: 'cancelled' })
     expect(result.current.markdown).toBe(visibleBeforeCancel)
+  })
+
+  it('快速连续启动两次时丢弃第一次的过期结果，只显示第二次', async () => {
+    const provider: TranslationProvider = {
+      async *translate(request) {
+        yield `# ${request.article.title}译\n\n> **作者**：${request.article.author || '（无）'}\n> **原文链接**：${request.article.url}\n\n${request.article.title}正文`
+      },
+    }
+    const dependencies = makeDependencies(provider)
+    const secondArticle: ExtractedArticle = { ...article, title: 'Second Article' }
+    let resolveFirst!: (value: ExtractedArticle) => void
+    const firstExtraction = new Promise<ExtractedArticle>((resolve) => {
+      resolveFirst = resolve
+    })
+    let extractCalls = 0
+    vi.mocked(dependencies.extractArticle).mockImplementation(() => {
+      extractCalls += 1
+      return extractCalls === 1 ? firstExtraction : Promise.resolve(secondArticle)
+    })
+    const { result } = renderHook(() => useTranslationSession(dependencies))
+
+    act(() => { result.current.start(12, article.url) })
+    // 等待第一次请求已进入提取阶段并挂起。
+    await waitFor(() => { expect(extractCalls).toBe(1) })
+
+    act(() => { result.current.start(12, article.url) })
+
+    await waitFor(() => { expect(result.current.state.kind).toBe('completed') })
+    const stateAfterSecond = result.current.state
+    expect(stateAfterSecond).toMatchObject({
+      kind: 'completed',
+      result: { title: 'Second Article译' },
+    })
+
+    // 第一次提取此时才返回，属于过期响应，应被丢弃。
+    await act(async () => { resolveFirst(article) })
+    expect(result.current.state).toEqual(stateAfterSecond)
+    expect(extractCalls).toBe(2)
   })
 })

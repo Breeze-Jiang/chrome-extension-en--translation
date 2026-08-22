@@ -15,6 +15,10 @@
     <img src="https://example.com/images/low.png" srcset="https://example.com/images/high.png 2x" alt="Srcset image">
     <p>Here is a lazy-loaded image.</p>
     <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" data-src="https://example.com/images/lazy.png" alt="Lazy image">
+    <p>Here is a lazy-loaded srcset image.</p>
+    <img src="/images/placeholder-1x1.gif" data-srcset="/images/lazy-small.png 1x, /images/lazy-large.png 2x" alt="Lazy srcset image">
+    <p>Here is a tracking pixel that must be removed.</p>
+    <img src="/images/pixel.gif" alt="Tracking pixel">
     <p>Here is a link with a relative URL.</p>
     <a href="/articles/related">Related article</a>
     <pre><code>const x = 1;

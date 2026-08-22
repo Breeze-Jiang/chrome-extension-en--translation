@@ -17,7 +17,11 @@ const STREAM_REFRESH_INTERVAL_MS = 50
 export interface TranslationSessionDependencies {
   readSettings: () => Promise<ModelSettings | null>
   readResult: () => Promise<TranslationResult | null>
-  saveResult: (result: TranslationResult, shouldCommit: () => boolean) => Promise<void>
+  saveResult: (
+    result: TranslationResult,
+    shouldCommit: () => boolean,
+    onCommit: () => void,
+  ) => Promise<void>
   extractArticle: (tabId: number, url: string) => Promise<ExtractedArticle>
   openSettings: () => Promise<void>
   provider: TranslationProvider
@@ -114,6 +118,7 @@ export function useTranslationSession(
         shouldCommit: () => (
           activeRequest.current === request && !controller.signal.aborted
         ),
+        onCommit: () => { cancellable.current = false },
       })
       if (activeRequest.current !== request || controller.signal.aborted || output === null) {
         return
@@ -136,13 +141,12 @@ export function useTranslationSession(
   }
 
   function start(tabId: number, url: string) {
-    if (running.current) {
-      return
-    }
+    // 新请求开始前取消旧请求并递增请求 ID，保证旧请求迟到结果被丢弃。
+    activeController.current?.abort()
+    activeRequest.current += 1
     running.current = true
     cancellable.current = true
-    const request = activeRequest.current + 1
-    activeRequest.current = request
+    const request = activeRequest.current
     const controller = new AbortController()
     activeController.current = controller
     clearRefreshTimer()
@@ -153,7 +157,7 @@ export function useTranslationSession(
   }
 
   function cancel() {
-    if (!running.current) {
+    if (!running.current || !cancellable.current) {
       return
     }
     running.current = false

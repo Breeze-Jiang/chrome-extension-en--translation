@@ -13,6 +13,7 @@ export const APP_ERROR_CODES = [
   'STREAM_INTERRUPTED',
   'INVALID_OUTPUT',
   'STORAGE_FAILED',
+  'CONTENT_TOO_LONG',
 ] as const
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number]

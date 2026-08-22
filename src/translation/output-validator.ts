@@ -73,6 +73,23 @@ function containsInOrder(markdown: string, values: string[]): boolean {
   return true
 }
 
+function countOccurrences(text: string, needle: string): number {
+  if (needle.length === 0) {
+    return 0
+  }
+  let count = 0
+  let from = 0
+  while (from < text.length) {
+    const index = text.indexOf(needle, from)
+    if (index < 0) {
+      break
+    }
+    count += 1
+    from = index + needle.length
+  }
+  return count
+}
+
 export function validateTranslationOutput(
   markdown: string,
   article: ExtractedArticle,
@@ -92,6 +109,11 @@ export function validateTranslationOutput(
     sourceIndex <= authorIndex ||
     body.length === 0
   ) {
+    invalidOutput()
+  }
+
+  // 元数据（作者行、原文链接行）只能出现一次，避免分段续译重复输出标题与元数据。
+  if (countOccurrences(markdown, authorMarker) !== 1 || countOccurrences(markdown, sourceMarker) !== 1) {
     invalidOutput()
   }
 

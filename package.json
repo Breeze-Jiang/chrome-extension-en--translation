@@ -8,21 +8,32 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
+    "@joplin/turndown-plugin-gfm": "^1.0.67",
+    "@mozilla/readability": "^0.6.0",
+    "defuddle": "^0.19.2",
     "md-wx": "^1.0.1",
+    "openai": "^7.5.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "turndown": "^7.2.4"
+  },
+  "overrides": {
+    "prismjs": "1.30.0"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.10.0",
     "@testing-library/react": "^16.3.2",
     "@types/chrome": "^0.1.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.1.1",

@@ -9,6 +9,7 @@ import { HeaderBar } from './components/HeaderBar'
 import { PageSummary } from './components/PageSummary'
 import { StatusPanel } from './components/StatusPanel'
 import { TranslationView } from './components/TranslationView'
+import { createMarkdownDownload } from './download/create-markdown-download'
 import {
   useTranslationSession,
   type TranslationSessionDependencies,
@@ -79,13 +80,18 @@ export function App({
       session.retry(page.tab.tabId, page.tab.url)
     }
   }
+  const downloadResult = () => {
+    if (currentState.kind === 'completed') {
+      createMarkdownDownload(currentState.result.title, currentState.result.markdown)
+    }
+  }
   const actionProps = {
     onOpenSettings,
     onTranslate: onTranslate ?? startSession,
     onCancel: onCancel ?? session.cancel,
     onRetry: onRetry ?? retrySession,
     onReTranslate: onReTranslate ?? startSession,
-    onDownload,
+    onDownload: onDownload ?? downloadResult,
   }
 
   const isProcessable = page.status === 'ready' && page.tab.processable
@@ -156,7 +162,12 @@ export function App({
       )}
 
       {(currentState.kind === 'failed' || currentState.kind === 'cancelled') && (
-        <ActionBar state={currentState} {...actionProps} />
+        <>
+          <ActionBar state={currentState} {...actionProps} />
+          <p className="sidepanel__hint" role="status">
+            上一次成功结果未被覆盖。
+          </p>
+        </>
       )}
     </div>
   )

@@ -137,6 +137,7 @@ describe('OpenAICompatibleProvider 流式输出', () => {
     expect(OpenAIMock).toHaveBeenCalledWith({
       apiKey: settings.apiKey,
       baseURL: settings.baseUrl,
+      dangerouslyAllowBrowser: true,
     })
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({ model: settings.model, stream: true }),

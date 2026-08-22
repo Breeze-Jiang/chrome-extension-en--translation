@@ -54,9 +54,10 @@ export class OpenAICompatibleProvider implements TranslationProvider {
     const client = new OpenAI({
       apiKey: request.settings.apiKey,
       baseURL: request.settings.baseUrl,
+      dangerouslyAllowBrowser: true,
     })
 
-    const messages = buildTranslationMessages(request.article)
+    const messages = request.messages ?? buildTranslationMessages(request.article)
 
     let stream
     try {

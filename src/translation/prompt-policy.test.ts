@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ExtractedArticle } from '../shared/contracts/article'
-import { buildTranslationMessages, TRANSLATION_SYSTEM_PROMPT } from './prompt-policy'
+import {
+  buildChunkedMessages,
+  buildTranslationMessages,
+  TRANSLATION_CONTINUATION_SYSTEM_PROMPT,
+  TRANSLATION_SYSTEM_PROMPT,
+} from './prompt-policy'
 
 const article: ExtractedArticle = {
   version: 1,
@@ -43,5 +48,37 @@ describe('buildTranslationMessages', () => {
   it('作者为空时仍保留作者行', () => {
     const content = buildTranslationMessages({ ...article, author: '' })[1].content
     expect(content).toContain('作者')
+  })
+})
+
+describe('buildChunkedMessages', () => {
+  const chunks = ['## First\n\nbody one', '## Second\n\nbody two']
+
+  it('返回每个分段对应的消息组', () => {
+    const sets = buildChunkedMessages(article, chunks)
+    expect(sets).toHaveLength(2)
+    expect(sets[0]).toHaveLength(2)
+    expect(sets[1]).toHaveLength(2)
+  })
+
+  it('首段包含标题、作者和原文链接，后续段仅输出正文', () => {
+    const sets = buildChunkedMessages(article, chunks)
+
+    const firstUser = sets[0][1].content
+    expect(firstUser).toContain('文章标题：')
+    expect(firstUser).toContain('作者：')
+    expect(firstUser).toContain('原文链接：')
+    expect(firstUser).toContain('body one')
+
+    const secondUser = sets[1][1].content
+    expect(secondUser).toContain('body two')
+    expect(secondUser).toContain('第 2/2 部分')
+    expect(secondUser).not.toContain('作者：')
+  })
+
+  it('后续段系统提示词禁止重复输出标题与元数据', () => {
+    const sets = buildChunkedMessages(article, chunks)
+    expect(sets[1][0].content).toBe(TRANSLATION_CONTINUATION_SYSTEM_PROMPT)
+    expect(TRANSLATION_CONTINUATION_SYSTEM_PROMPT).toContain('不要输出文章的一级标题')
   })
 })
