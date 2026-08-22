@@ -78,6 +78,11 @@ export function useTranslationSession(
     if (activeRequest.current !== request) {
       return
     }
+    // #region debug-point T4:first-ui-snapshot
+    if (pendingMarkdown.current.length === 0) {
+      void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T4-T5', location: 'src/sidepanel/hooks/use-translation-session.ts:scheduleSnapshot', msg: '[DEBUG] First UI snapshot received', data: { request, snapshotLength: snapshot.length }, ts: Date.now() }) }).catch(() => { })
+    }
+    // #endregion
     pendingMarkdown.current = snapshot
     setState((current) => current.kind === 'extracting' ? { kind: 'translating' } : current)
     if (refreshTimer.current === null) {
@@ -90,7 +95,13 @@ export function useTranslationSession(
 
   async function run(tabId: number, url: string, request: number, controller: AbortController) {
     try {
+      // #region debug-point T0:session-run
+      void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T0-T1', location: 'src/sidepanel/hooks/use-translation-session.ts:run', msg: '[DEBUG] Translation session started', data: { request, tabId, urlLength: url.length }, ts: Date.now() }) }).catch(() => { })
+      // #endregion
       const settings = await dependencies.readSettings()
+      // #region debug-point T0:settings-read
+      void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T0', location: 'src/sidepanel/hooks/use-translation-session.ts:run', msg: '[DEBUG] Settings read completed', data: { request, hasSettings: settings !== null }, ts: Date.now() }) }).catch(() => { })
+      // #endregion
       if (activeRequest.current !== request || controller.signal.aborted) {
         return
       }

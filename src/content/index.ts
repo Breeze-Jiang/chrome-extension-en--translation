@@ -43,7 +43,14 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   }
 
   if (parsed.type === MESSAGE_TYPES.EXTRACT_ARTICLE_REQUEST) {
+    const extractionStartedAt = Date.now()
+    // #region debug-point T2:content-extraction-started
+    void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T2', location: 'src/content/index.ts:extract', msg: '[DEBUG] Content extraction started', data: { urlLength: document.location.href.length }, ts: extractionStartedAt }) }).catch(() => { })
+    // #endregion
     const article = extractArticleAsArticle(document, document.location.href)
+    // #region debug-point T2:content-extraction-finished
+    void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T2', location: 'src/content/index.ts:extract', msg: '[DEBUG] Content extraction finished', data: { durationMs: Date.now() - extractionStartedAt, success: article !== null, markdownLength: article?.markdown.length ?? 0 }, ts: Date.now() }) }).catch(() => { })
+    // #endregion
     if (article) {
       const response: ExtractArticleSuccess = {
         type: MESSAGE_TYPES.EXTRACT_ARTICLE_SUCCESS,

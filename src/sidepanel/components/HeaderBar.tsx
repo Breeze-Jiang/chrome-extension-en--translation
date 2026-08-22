@@ -14,9 +14,9 @@ export function HeaderBar({ onOpenSettings }: HeaderBarProps) {
 
   return (
     <header className="header-bar">
-      <span className="header-bar__title">网页翻译</span>
+      <span className="header-bar__title">英文网页翻译</span>
       <button type="button" className="header-bar__settings" onClick={handleOpenSettings}>
-        设置
+        模型切换设置
       </button>
     </header>
   )

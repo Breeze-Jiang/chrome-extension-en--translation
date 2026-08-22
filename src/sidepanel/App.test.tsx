@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TranslationState } from '../shared/contracts/translation'
@@ -40,6 +40,9 @@ vi.mock('../shared/messaging/client', () => ({
 }))
 
 const mockedRequestActiveTab = vi.mocked(requestActiveTab)
+type TabUpdatedListener = Parameters<typeof chrome.tabs.onUpdated.addListener>[0]
+const tabActivatedListeners = new Set<() => void>()
+const tabUpdatedListeners = new Set<TabUpdatedListener>()
 
 const processableTab: ActiveTabInfo = {
   tabId: 12,
@@ -75,16 +78,33 @@ const completedState: TranslationState = {
 beforeEach(() => {
   mockedRequestActiveTab.mockReset()
   mockedRequestActiveTab.mockResolvedValue(processableTab)
+  tabActivatedListeners.clear()
+  tabUpdatedListeners.clear()
+  vi.stubGlobal('chrome', {
+    tabs: {
+      onActivated: {
+        addListener: (listener: () => void) => tabActivatedListeners.add(listener),
+        removeListener: (listener: () => void) => tabActivatedListeners.delete(listener),
+      },
+      onUpdated: {
+        addListener: (listener: TabUpdatedListener) => tabUpdatedListeners.add(listener),
+        removeListener: (listener: TabUpdatedListener) => tabUpdatedListeners.delete(listener),
+      },
+    },
+  })
 })
 
 describe('侧边栏空闲状态', () => {
-  it('渲染顶部栏、当前网页摘要和一键翻译按钮', async () => {
+  it('渲染中文顶部栏、当前网页摘要和翻译按钮', async () => {
     render(<App state={{ kind: 'idle' }} />)
 
-    expect(screen.getByText('网页翻译')).toBeInTheDocument()
+    expect(screen.getByText('英文网页翻译')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '模型切换设置' })).toBeInTheDocument()
+    expect(screen.getByText('已识别当前网页')).toBeInTheDocument()
+    expect(screen.getByText('原文标题')).toBeInTheDocument()
     expect(await screen.findByText('How to Build Reliable AI Systems')).toBeInTheDocument()
-    expect(screen.getByText('example.com')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '一键翻译当前网页' })).toBeEnabled()
+    expect(screen.getByText('来源网站：example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '开始翻译为中文' })).toBeEnabled()
   })
 
   it('受限页面禁用翻译按钮并显示不支持当前页面', async () => {
@@ -92,7 +112,7 @@ describe('侧边栏空闲状态', () => {
     render(<App state={{ kind: 'idle' }} />)
 
     expect(await screen.findByText('不支持当前页面')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '一键翻译当前网页' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始翻译为中文' })).toBeDisabled()
   })
 
   it('读取标签页失败时禁用按钮并提示无法读取', async () => {
@@ -100,7 +120,22 @@ describe('侧边栏空闲状态', () => {
     render(<App state={{ kind: 'idle' }} />)
 
     expect(await screen.findByText('无法读取当前网页')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '一键翻译当前网页' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '开始翻译为中文' })).toBeDisabled()
+  })
+
+  it('活动标签页从受限页面切换到文章页后刷新可处理状态', async () => {
+    mockedRequestActiveTab
+      .mockResolvedValueOnce(restrictedTab)
+      .mockResolvedValueOnce(processableTab)
+    render(<App state={{ kind: 'idle' }} />)
+
+    expect(await screen.findByText('不支持当前页面')).toBeInTheDocument()
+    await act(async () => {
+      tabActivatedListeners.forEach((listener) => listener())
+    })
+
+    expect(await screen.findByText('How to Build Reliable AI Systems')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '开始翻译为中文' })).toBeEnabled()
   })
 })
 
@@ -117,7 +152,7 @@ describe('侧边栏提取状态', () => {
     }
     render(<App sessionDependencies={dependencies} />)
 
-    fireEvent.click(await screen.findByRole('button', { name: '一键翻译当前网页' }))
+    fireEvent.click(await screen.findByRole('button', { name: '开始翻译为中文' }))
 
     await vi.waitFor(() => expect(dependencies.openSettings).toHaveBeenCalledTimes(1))
     expect(dependencies.extractArticle).not.toHaveBeenCalled()
@@ -128,7 +163,7 @@ describe('侧边栏提取状态', () => {
     render(<App state={{ kind: 'extracting' }} />)
 
     expect(await screen.findByText('正在提取文章')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '一键翻译当前网页' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '开始翻译为中文' })).not.toBeInTheDocument()
   })
 })
 

@@ -60,6 +60,10 @@ export class OpenAICompatibleProvider implements TranslationProvider {
     const messages = request.messages ?? buildTranslationMessages(request.article)
 
     let stream
+    const requestStartedAt = Date.now()
+    // #region debug-point T3:model-request-started
+    void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T3', location: 'src/translation/providers/openai-compatible.ts:translate', msg: '[DEBUG] Model stream request started', data: { model: request.settings.model, articleLength: request.article.markdown.length }, ts: requestStartedAt }) }).catch(() => { })
+    // #endregion
     try {
       stream = await client.chat.completions.create(
         {
@@ -77,15 +81,27 @@ export class OpenAICompatibleProvider implements TranslationProvider {
     }
 
     try {
+      let chunkCount = 0
+      let outputLength = 0
       for await (const chunk of stream) {
         if (request.signal.aborted) {
           return
         }
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
+          chunkCount += 1
+          outputLength += delta.length
+          // #region debug-point T3:first-model-delta
+          if (chunkCount === 1) {
+            void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T3', location: 'src/translation/providers/openai-compatible.ts:translate', msg: '[DEBUG] First model delta received', data: { firstTokenMs: Date.now() - requestStartedAt, deltaLength: delta.length }, ts: Date.now() }) }).catch(() => { })
+          }
+          // #endregion
           yield delta
         }
       }
+      // #region debug-point T3:model-stream-finished
+      void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'translation-stream-stall', runId: 'pre-fix', hypothesisId: 'T3', location: 'src/translation/providers/openai-compatible.ts:translate', msg: '[DEBUG] Model stream finished', data: { durationMs: Date.now() - requestStartedAt, chunkCount, outputLength }, ts: Date.now() }) }).catch(() => { })
+      // #endregion
     } catch (error) {
       if (isAbortError(error)) {
         return

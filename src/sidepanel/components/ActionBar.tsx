@@ -33,7 +33,7 @@ export function ActionBar({
             onClick={onTranslate}
             disabled={disabled}
           >
-            一键翻译当前网页
+            开始翻译为中文
           </button>
         </div>
       )

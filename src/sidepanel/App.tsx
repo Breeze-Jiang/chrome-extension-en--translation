@@ -54,19 +54,43 @@ export function App({
 
   useEffect(() => {
     let cancelled = false
-    requestActiveTab()
-      .then((tab) => {
-        if (!cancelled) {
-          setPage({ status: 'ready', tab })
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPage({ status: 'error' })
-        }
-      })
+    const refreshActiveTab = () => {
+      setPage({ status: 'loading' })
+      requestActiveTab()
+        .then((tab) => {
+          // #region debug-point A-B-C:sidepanel-received-tab
+          void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'sidepanel-tab-detection', runId: 'pre-fix', hypothesisId: 'A-B-C', location: 'src/sidepanel/App.tsx:refreshActiveTab', msg: '[DEBUG] Side panel received active tab', data: { tabId: tab.tabId, url: tab.url, title: tab.title, domain: tab.domain, processable: tab.processable, reason: tab.reason }, ts: Date.now() }) }).catch(() => { })
+          // #endregion
+          if (!cancelled) {
+            setPage({ status: 'ready', tab })
+          }
+        })
+        .catch((error) => {
+          // #region debug-point B-C:sidepanel-request-failed
+          void fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'sidepanel-tab-detection', runId: 'pre-fix', hypothesisId: 'B-C', location: 'src/sidepanel/App.tsx:refreshActiveTab', msg: '[DEBUG] Side panel active-tab request failed', data: { error: String(error) }, ts: Date.now() }) }).catch(() => { })
+          // #endregion
+          if (!cancelled) {
+            setPage({ status: 'error' })
+          }
+        })
+    }
+    const handleTabActivated = () => refreshActiveTab()
+    const handleTabUpdated: Parameters<typeof chrome.tabs.onUpdated.addListener>[0] = (
+      _tabId,
+      changeInfo,
+    ) => {
+      if (changeInfo.status === 'complete' || changeInfo.url !== undefined) {
+        refreshActiveTab()
+      }
+    }
+
+    refreshActiveTab()
+    chrome.tabs.onActivated.addListener(handleTabActivated)
+    chrome.tabs.onUpdated.addListener(handleTabUpdated)
     return () => {
       cancelled = true
+      chrome.tabs.onActivated.removeListener(handleTabActivated)
+      chrome.tabs.onUpdated.removeListener(handleTabUpdated)
     }
   }, [])
 
@@ -118,13 +142,13 @@ export function App({
       return <p className="sidepanel__hint">无法读取当前网页。</p>
     }
     if (page.tab.processable) {
-      return <p className="sidepanel__hint">提取正文并翻译为中文，结果仅保存在本地。</p>
+      return <p className="sidepanel__hint">译文仅保存在本机浏览器中，不会覆盖网页原文。</p>
     }
     return <p className="sidepanel__hint">{RESTRICTED_TEXT}</p>
   }
 
   return (
-    <div className="sidepanel">
+    <div className={`sidepanel sidepanel--${currentState.kind}`}>
       <HeaderBar onOpenSettings={onOpenSettings} />
 
       {!isControlled && session.restoreError && (
